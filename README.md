@@ -3,9 +3,11 @@
 ![a picture](./demo/visualnome.jpg)
 
 # Features
-- Beat per minute (BPM) can be set.
+- Beat per minute (BPM)
 - An indicator runs around the ring every measure / bar (4 beats).
-- Flash on every (down)beat. Can be set to offset at upbeat/offbeat.
+- Whole ring flashes on every beat. Downbeat or upbeat configurable.
+- First beat accented (stronger flash, higher buzz tone)
+- Stationary marks on every beat.
 
 # Bill of material
 - A microcontroller, such as an Arduino
