@@ -17,7 +17,9 @@ unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
 bool upbeat = UPBEAT;
 unsigned int steps_offset = steps_p_beat / 2 * upbeat;
-char m = 'S'; // R - running. S - standby. T - tapping
+char m = 'S', m_trapexit = 'S'; // R - running. S - standby. T - tapping
+unsigned int tap_count = 0;
+unsigned long taptime[6];
 
 Beat_gen myBeat;
 //----------------------------------------------------------
@@ -82,26 +84,34 @@ void setup()
   }
 }
 //----------------------------------------------------------
+void tap_prepare()
+{
+  pixels.fill(0x00008000, 0);
+  pixels.show();
+  tap_count = 0;
+}
+//----------------------------------------------------------
 void loop()
 {
   // refresh botton status
   myButton.read();
   bool buttonDrop = myButton.wasPressed();
   bool buttonRelease = myButton.wasReleased();
-  bool longpress = myButton.pressedFor(2000);
-  Serial.print(m);
+  bool longpress = myButton.pressedFor(1600);
+  // Serial.print(m);
   switch (m)
   {
   case 'S':
     if (longpress) // Going to tap mode, while stopping at Y to catch the button release
     {
-      pixels.fill(0x00008000, 0);
-      pixels.show();
-      m = 'Y';
+      tap_prepare();
+      m = 'Z';
+      m_trapexit = 'T';
     }
     else if (buttonRelease)
     {
       myBeat.start(myButton.lastChange());
+      Serial.println("Started");
       m = 'R';
     }
     break;
@@ -121,32 +131,53 @@ void loop()
     {
       myBeat.stop();
       m = 'Z';
+      m_trapexit = 'S';
+      Serial.println("Stopped");
     }
     break;
 
-  case 'Z': //trap after the stop
-    if (buttonRelease)
-      m = 'S';
-    break;
-
-  case 'Y': //trap between Standby and Tap
-    if (buttonRelease)
-      m = 'T';
-    break;
-
   case 'T':
+    if (buttonRelease)
+    {
+      taptime[tap_count] = myButton.lastChange();
+      tap_count++;
+      pixels.fill(0x000000, 1, tap_count * 3); // turn off the leds as tapping proceeds
+      pixels.show();
+      if (tap_count >= 5)
+      {
+        unsigned long tap_interval = (taptime[4] - taptime[1]) / 3;
+        unsigned int new_bpm = 60000 / tap_interval;
+        Serial.println("New BPM:");
+        Serial.println(new_bpm);
+        if (new_bpm > 30 && new_bpm <= 240)
+        {
+          Serial.println("New BPM Valid!");
+          bpm = new_bpm;
+          myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
+          myBeat.start(myButton.lastChange());
+          Serial.println("Started (tap the beat)");
+          m = 'R';
+        }
+        else
+        {
+          Serial.println("New BPM out of range!");
+          tap_prepare();
+        }
+      }
+    }
     if (longpress)
     {
       pixels.fill(0x000000);
       pixels.show();
-      m = 'X';
+      m = 'Z';
+      m_trapexit = 'S';
     }
     break;
 
-  case 'X': //trap between Tap and Standby
+  case 'Z': //trap to catch a release action
     if (buttonRelease)
-      m = 'S';
-  break;
+      m = m_trapexit;
+    break;
 
   default:
     break;
