@@ -88,14 +88,16 @@ void loop()
   myButton.read();
   bool buttonDrop = myButton.wasPressed();
   bool buttonRelease = myButton.wasReleased();
-  bool longpress = myButton.pressedFor(1000);
+  bool longpress = myButton.pressedFor(2000);
+  Serial.print(m);
   switch (m)
   {
   case 'S':
-    if (longpress) {
-      m = 'T';
-      pixels.fill(0,128,0);
+    if (longpress) // Going to tap mode, while stopping at Y to catch the button release
+    {
+      pixels.fill(0x00008000, 0);
       pixels.show();
+      m = 'Y';
     }
     else if (buttonRelease)
     {
@@ -118,19 +120,36 @@ void loop()
     if (buttonDrop)
     {
       myBeat.stop();
-      m = 'S';
+      m = 'Z';
     }
     break;
 
-  case 'T':
-    if (longpress) {
+  case 'Z': //trap after the stop
+    if (buttonRelease)
       m = 'S';
-      pixels.fill(0,0,0);
+    break;
+
+  case 'Y': //trap between Standby and Tap
+    if (buttonRelease)
+      m = 'T';
+    break;
+
+  case 'T':
+    if (longpress)
+    {
+      pixels.fill(0x000000);
       pixels.show();
+      m = 'X';
     }
     break;
+
+  case 'X': //trap between Tap and Standby
+    if (buttonRelease)
+      m = 'S';
+  break;
 
   default:
     break;
   }
+  delay(20);
 }
