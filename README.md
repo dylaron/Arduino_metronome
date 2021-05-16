@@ -3,7 +3,8 @@
 ![a picture](./demo/visualnome.jpg)
 
 # Features
-- Beat per minute (BPM)
+- Single button interface, short press to start / stop.
+- (to be added) 'tap to set BPM' by long press when stopped.
 - An indicator runs around the ring every measure / bar (4 beats).
 - Whole ring flashes on every beat. Downbeat or upbeat configurable.
 - First beat accented (stronger flash, higher buzz tone)
