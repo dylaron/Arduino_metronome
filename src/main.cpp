@@ -15,6 +15,8 @@ const bool init_start = AUTOSTART;
 unsigned int bpm = INITBPM;
 unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
+bool upbeat = UPBEAT;
+unsigned int steps_offset = steps_p_beat / 2 * upbeat;
 
 Beat_gen myBeat;
 //----------------------------------------------------------
@@ -91,7 +93,7 @@ void loop()
   bool ontime = myBeat.checktime();
   if (ontime)
   {
-    unsigned int onbeat = (myBeat.current_step() == 0) + (myBeat.current_step() % steps_p_beat == 0);
+    unsigned int onbeat = (myBeat.current_step() == steps_offset) + ((myBeat.current_step() + steps_offset) % steps_p_beat == 0);
     led_ring_show(myBeat.running(), myBeat.progress_pct(), onbeat, beats_p_bar);
     if (onbeat == 2)
       tone(TONEPIN, 261, 60);
