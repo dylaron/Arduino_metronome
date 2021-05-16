@@ -16,6 +16,8 @@ unsigned int bpm = INITBPM;
 unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
 
+Beat_gen myBeat;
+//----------------------------------------------------------
 void led_ring_show(bool _running, float _progress, unsigned int _accent, unsigned int _beats)
 {
   unsigned int rr, gg, bb;
@@ -60,9 +62,7 @@ void led_ring_show(bool _running, float _progress, unsigned int _accent, unsigne
   }
   pixels.show(); // This sends the updated pixel color to the hardware.
 }
-
-Beat_gen myBeat;
-
+//----------------------------------------------------------
 void setup()
 {
   myToggle.begin();
@@ -74,6 +74,7 @@ void setup()
   if (init_start)
     myBeat.start(millis());
 }
+//----------------------------------------------------------
 void loop()
 {
   // refresh botton status
