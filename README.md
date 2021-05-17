@@ -1,6 +1,5 @@
 # Visual-nome
-
-![a picture](./demo/visualnome.jpg)
+[![(Oops it didn't show up?)](http://img.youtube.com/vi/hP1SXVaFfuM/0.jpg)](http://www.youtube.com/watch?v=hP1SXVaFfuM "Video on YouTube")
 
 # Features
 - Single button interface, short press to start / stop.
@@ -16,8 +15,10 @@
 - A pushbutton switch (normally open)
 - A piezo buzzer
 
-# How to use
+# How to use the code?
 - The easist way is to use VS Code with PlatformIO extension. The platformio.ini will take charge of the project.
 - Make sure libraries (Adafruit_NeoPixel and JC_Button) are available.
 - src/main.cpp is the main program to compile and load to the microcontroller
 - Change the variables in src/Defines.h as you wish
+
+![a picture](./demo/visualnome.jpg)
