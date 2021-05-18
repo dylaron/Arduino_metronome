@@ -5,7 +5,7 @@
 
 #define NUMPIXELS 16
 // Parameters
-#define AUTOSTART true // start the metronome automatically upon power up and reset
+#define AUTOSTART false // start the metronome automatically upon power up and reset
 #define INITBPM 96 // Default BPM to start with
 #define BEATS 4 // Beats per bar (measure, cycle)
 #define SUBBEAT 12 // Divide per beat into sub steps
