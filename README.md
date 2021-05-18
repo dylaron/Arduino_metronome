@@ -14,6 +14,7 @@
 - Neopixel LED ring. 16-pixel is perfect for rock beat. 1/16th note for each pixel. 12-pixel will be good for blues (4 triplets)
 - A pushbutton switch (normally open)
 - A piezo buzzer
+- ![Wiring Diagram](./demo/visual_metronome_diagram.png)
 
 # How to use the code?
 - The easist way is to use VS Code with PlatformIO extension. The platformio.ini will take charge of the project.
