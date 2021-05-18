@@ -63,7 +63,7 @@ void led_ring_show(bool _running, float _progress, unsigned int _accent, unsigne
         bb += f;
       }
     }
-    pixels.setPixelColor(totalpixels - 1 - i, pixels.Color(rr, gg, bb));
+    pixels.setPixelColor((totalpixels - 1 - i + PIXELOFFSET) % 16, pixels.Color(rr, gg, bb));
   }
   pixels.show(); // This sends the updated pixel color to the hardware.
 }
@@ -141,7 +141,7 @@ void loop()
     {
       taptime[tap_count] = myButton.lastChange();
       tap_count++;
-      pixels.fill(0x000000, 1, tap_count * 3); // turn off the leds as tapping proceeds
+      pixels.fill(0x000000, (15 + PIXELOFFSET - tap_count * 3) % 16, 3); // turn off the leds as tapping proceeds
       pixels.show();
       if (tap_count >= 5)
       {
