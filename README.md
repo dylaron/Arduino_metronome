@@ -6,6 +6,7 @@
 - Whole ring flashes on every beat. Downbeat or upbeat configurable.
 - First beat accented (stronger flash, higher buzz tone)
 - Stationary marks on every beat.
+Video below
 [![(Oops it didn't show up?)](http://img.youtube.com/vi/hP1SXVaFfuM/0.jpg)](http://www.youtube.com/watch?v=hP1SXVaFfuM "Video on YouTube")
 
 # Bill of material
