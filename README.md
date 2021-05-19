@@ -22,4 +22,4 @@ Video below
 - src/main.cpp is the main program to compile and load to the microcontroller
 - Change the variables in src/Defines.h as you wish
 
-![a picture](./demo/visualnome.jpg)
+![a picture](./demo/visualnome_proto1.jpg)
