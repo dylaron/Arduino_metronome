@@ -106,8 +106,7 @@ void loop()
       pixels.show();
       if (tap_count >= 5)
       {
-        unsigned long tap_interval = (taptime[4] - taptime[1]) / 3;
-        unsigned int new_bpm = 60000 / tap_interval;
+        unsigned int new_bpm = 60000UL * 3 / (taptime[4] - taptime[1]); // based on 3 beats from last 4 taps
         Serial.println("New BPM:");
         Serial.println(new_bpm);
         if (new_bpm > 30 && new_bpm <= 240)
