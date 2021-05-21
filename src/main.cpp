@@ -23,50 +23,74 @@ unsigned long taptime[6];
 
 Beat_gen myBeat;
 //----------------------------------------------------------
-void led_ring_show(bool _running, float _progress, unsigned int _accent, unsigned int _beats)
+class Ring_Metronome
 {
-  unsigned int rr, gg, bb;
-  const unsigned int totalpixels = NUMPIXELS;
-  const unsigned int r_runner = 0,
-                     g_runner = 0,
-                     b_runner = 128; // color of the runner
-  const unsigned int r_1sttick = 96,
-                     g_1sttick = 12,
-                     b_1sttick = 12; // color of the 1st tick
-  const unsigned int r_tick = 32,
-                     g_tick = 32,
-                     b_tick = 32;                          // color of the rest ticks
-  const unsigned int tick_interval = totalpixels / _beats; // 4 for quarter note, 2 for eigth note
-  const unsigned int flash_intensity = 24;
-  for (unsigned int i = 0; i < totalpixels; i++)
+private:
+  unsigned int totalpixels;
+  unsigned int beats, accent;
+  Adafruit_NeoPixel p;
+  int32_t rgb_runner = 0x00000080,
+          rgb_tick_1st = 0x00802020,
+          rgb_tick_rest = 0x00402020,
+          rgb_flash_strong = 0x00808080,
+          rgb_flash_weak = 0x00202020;
+
+public:
+  Ring_Metronome(Adafruit_NeoPixel &_p, unsigned int _pixelcount);
+  void setup(unsigned int _beats);
+  void show(bool _running, float _progress, unsigned int _flash);
+};
+
+Ring_Metronome::Ring_Metronome(Adafruit_NeoPixel &_p, unsigned int _pixelcount)
+{
+  this->totalpixels = _pixelcount;
+  this->p = _p;
+};
+
+void Ring_Metronome::setup(unsigned int _beats)
+{
+  this->beats = _beats;
+};
+
+void Ring_Metronome::show(bool _running, float _progress, unsigned int _flash)
+{
+  int32_t rgb;
+  const unsigned int tick_interval = totalpixels / this->beats; // 4 for quarter note, 2 for eigth note
+  for (unsigned int i = 0; i < this->totalpixels; i++)
   {
+    rgb = 0x00000000;
     // fixed ticks
-    bool _1sttick = (i == 0);
-    bool _ontick = ((i % tick_interval == 0) && !_1sttick);
-    rr = r_1sttick * _1sttick + r_tick * _ontick;
-    gg = g_1sttick * _1sttick + g_tick * _ontick;
-    bb = b_1sttick * _1sttick + b_tick * _ontick;
+    if (i == 0)
+    {
+      rgb = this->rgb_tick_1st;
+    }
+    else if (i % tick_interval == 0)
+    {
+      rgb = this->rgb_tick_rest;
+    }
+
     if (_running)
     {
       // running dot
-      if (i == round(totalpixels * _progress))
+      if (i == round(this->totalpixels * _progress))
       {
-        rr = r_runner;
-        gg = g_runner;
-        bb = b_runner;
+        rgb = this->rgb_runner;
       }
       else // flashing on accent
       {
-        unsigned int f = flash_intensity * _accent;
-        rr += f;
-        gg += f;
-        bb += f;
+        if (_flash == 2)
+          rgb = this->rgb_flash_strong;
+        else if (_flash == 1)
+          rgb = this->rgb_flash_weak;
       }
     }
-    pixels.setPixelColor((totalpixels - 1 - i + PIXELOFFSET) % 16, pixels.Color(rr, gg, bb));
+    this->p.setPixelColor((this->totalpixels - 1 - i + PIXELOFFSET) % 16, rgb);
   }
-  pixels.show(); // This sends the updated pixel color to the hardware.
-}
+  this->p.show(); // This sends the updated pixel color to the hardware.
+};
+
+Ring_Metronome myRing(pixels, NUMPIXELS);
+
 //----------------------------------------------------------
 void setup()
 {
@@ -74,6 +98,7 @@ void setup()
   pixels.begin();
   pixels.setBrightness(45); // 1/3 brightness
   myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
+  myRing.setup(beats_p_bar);
   Serial.begin(9600);
 
   if (init_start)
@@ -121,7 +146,7 @@ void loop()
     if (myBeat.checktime())
     {
       unsigned int onbeat = (myBeat.current_step() == steps_offset) + ((myBeat.current_step() + steps_offset) % steps_p_beat == 0);
-      led_ring_show(myBeat.running(), myBeat.progress_pct(), onbeat, beats_p_bar);
+      myRing.show(myBeat.running(), myBeat.progress_pct(), onbeat);
       if (onbeat == 2)
         tone(TONEPIN, 261, 60);
       else if (onbeat == 1)
@@ -167,7 +192,7 @@ void loop()
     }
     if (longpress)
     {
-      pixels.fill(0x000000);
+      pixels.clear();
       pixels.show();
       m = 'Z';
       m_trapexit = 'S';
