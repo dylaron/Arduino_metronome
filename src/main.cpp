@@ -5,9 +5,9 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include <Adafruit_NeoPixel.h>
 #include <JC_Button.h>
 
-#include "Defines.h"
-#include "Beat_Gen.h"
-#include "Ring_Metronome.h"
+#include "Defines.h"        // all configurable variables are there
+#include "Beat_Gen.h"       // This class deals with timing
+#include "Ring_Metronome.h" // This class deals with the visual rendering
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LEDRINGPIN);
 Button myButton(BUTTONPIN, 80);
