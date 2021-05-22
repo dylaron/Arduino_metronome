@@ -8,6 +8,7 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include "Defines.h"        // all configurable variables are there
 #include "Beat_Gen.h"       // This class deals with timing
 #include "Ring_Metronome.h" // This class deals with the visual rendering
+#include "Tap2Bpm.h"
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LEDRINGPIN);
 Button myButton(BUTTONPIN, 80);
@@ -19,17 +20,15 @@ unsigned int steps_p_beat = SUBBEAT;
 bool upbeat = UPBEAT;
 unsigned int steps_offset = steps_p_beat / 2 * upbeat;
 char m = 'S', m_trapexit = 'S'; // R - running. S - standby. T - tapping
-unsigned int tap_count = 0;
-unsigned long taptime[6];
 
 Beat_gen myBeat;
 Ring_Metronome myRing(pixels, NUMPIXELS, PIXELOFFSET);
+Tap2Bpm myTapper(5);
 //----------------------------------------------------------
 void tap_prepare()
 {
   pixels.fill(0x00008000, 0);
   pixels.show();
-  tap_count = 0;
 }
 //----------------------------------------------------------
 void setup()
@@ -40,7 +39,7 @@ void setup()
   myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
   myRing.setup(beats_p_bar);
   myRing.setColor(RGBRUNNER, RGB1STTICK, RGBRESTTICK, RGBFLASHS, RGBFLASHW);
-  
+
   myRing.setTicksRGB();
   pixels.show();
 
@@ -103,19 +102,16 @@ void loop()
   case 'T':
     if (buttonRelease)
     {
-      taptime[tap_count] = myButton.lastChange();
-      tap_count++;
-      pixels.fill(0x000000, (15 + PIXELOFFSET - tap_count * 3) % 16, 3); // turn off the leds as tapping proceeds
+      bool doneTapping = myTapper.tapNow(myButton.lastChange());
+      pixels.fill(0x000000, (15 + PIXELOFFSET - myTapper.getCount() * 3) % 16, 3); // turn off the leds as tapping proceeds
       pixels.show();
-      if (tap_count >= 5)
+      if (doneTapping)
       {
-        unsigned int new_bpm = 60000UL * 3 / (taptime[4] - taptime[1]); // based on 3 beats from last 4 taps
-        Serial.println("New BPM:");
-        Serial.println(new_bpm);
-        if (new_bpm > 30 && new_bpm <= 240)
+        if (myTapper.checkBPM())
         {
           Serial.println("New BPM Valid!");
-          bpm = new_bpm;
+          bpm = myTapper.getBPM();
+          Serial.println(bpm);
           myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
           myBeat.start(myButton.lastChange());
           Serial.println("Started (tap the beat)");
@@ -126,6 +122,7 @@ void loop()
           Serial.println("New BPM out of range!");
           tap_prepare();
         }
+        myTapper.reset();
       }
     }
     if (longpress)
