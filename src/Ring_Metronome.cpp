@@ -29,17 +29,13 @@ void Ring_Metronome::setTicksRGB()
 
 void Ring_Metronome::update(bool _running, float _progress, unsigned int _flash)
 {
-    int32_t rgb;
-    for (unsigned int i = 0; i < this->totalpixels; i++)
-    {
-        rgb = 0x00000000;
-        // flashing on accent
-        if (_flash == 2)
-            rgb = this->rgb_flash_strong;
-        else if (_flash == 1)
-            rgb = this->rgb_flash_weak;
-        this->p.setPixelColor(index2pixel(i), rgb);
-    }
+    int32_t rgb = 0x00000000;
+    // flashing on accent
+    if (_flash == 2)
+        rgb = this->rgb_flash_strong;
+    else if (_flash == 1)
+        rgb = this->rgb_flash_weak;
+    this->p.fill(rgb);
     setTicksRGB();
     this->p.setPixelColor(index2pixel(round(this->totalpixels * _progress)), this->rgb_runner);
 };
