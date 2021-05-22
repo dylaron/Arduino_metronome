@@ -40,7 +40,9 @@ void setup()
   myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
   myRing.setup(beats_p_bar);
   myRing.setColor(RGBRUNNER, RGB1STTICK, RGBRESTTICK, RGBFLASHS, RGBFLASHW);
-  myRing.show(true, 0, 0);
+  
+  myRing.setTicksRGB();
+  pixels.show();
 
   Serial.begin(9600);
 
@@ -82,7 +84,8 @@ void loop()
     if (myBeat.checktime())
     {
       unsigned int onbeat = (myBeat.current_step() == steps_offset) + ((myBeat.current_step() + steps_offset) % steps_p_beat == 0);
-      myRing.show(myBeat.running(), myBeat.progress_pct(), onbeat);
+      myRing.update(myBeat.running(), myBeat.progress_pct(), onbeat);
+      pixels.show();
       if (onbeat == 2)
         tone(TONEPIN, 261, 60);
       else if (onbeat == 1)
