@@ -10,7 +10,7 @@ Video below
 [![(Oops it didn't show up?)](http://img.youtube.com/vi/hP1SXVaFfuM/0.jpg)](http://www.youtube.com/watch?v=hP1SXVaFfuM "Video on YouTube")
 
 # Bill of material
-- A microcontroller, such as an Arduino
+- A microcontroller, such as an Arduino, Seeeduino Xiao, etc
 - Neopixel LED ring. 16-pixel is perfect for rock beat. 1/16th note for each pixel. 12-pixel will be good for blues (4 triplets)
 - A pushbutton switch (normally open)
 - A piezo buzzer
@@ -22,4 +22,5 @@ Video below
 - src/main.cpp is the main program to compile and load to the microcontroller
 - Change the variables in src/Defines.h as you wish
 
+![back side](./demo/4056813812.jpg)
 ![a picture](./demo/visualnome_proto1.jpg)
