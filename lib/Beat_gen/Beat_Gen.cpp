@@ -1,44 +1,36 @@
 #include "Beat_Gen.h"
+#include "Pulser.h"
 
 Beat_gen::Beat_gen()
 {
-  this->_running = false;
 }
 
 void Beat_gen::setBeats(unsigned int bpm, unsigned int beats, unsigned int sub_div)
 {
   this->step_count = beats * sub_div;
-  this->time_step = round(60000UL / bpm / sub_div);
+  unsigned int _p = round(60000UL / bpm / sub_div);
+  this->myPulse.setPeriod(_p);
 }
 
-void Beat_gen::start(unsigned long atwhen)
+void Beat_gen::start(unsigned long atwhen = millis())
 {
-  c_s = 0;
-  this->_running = true;
-  this->next_time = atwhen;
-  _firsttick = true;
+  this->myPulse.start(atwhen);
+  c_s = this->step_count - 1;
 }
 
 void Beat_gen::stop()
 {
-  this->_running = false;
+  this->myPulse.reset();
 }
 
 bool Beat_gen::checktime()
 {
-  bool res = false;
-  if (this->_firsttick)
+  bool res = this->myPulse.check();
+  if (res)
   {
-    res = true;
-    this->_firsttick = false;
-  }
-  else if (millis() >= this->next_time)
-  {
-    res = true;
-    this->next_time += this->time_step;
     this->c_s = (this->c_s + 1) % this->step_count;
   }
-  return (res && _running);
+  return res;
 }
 
 unsigned int Beat_gen::current_step()
@@ -48,7 +40,7 @@ unsigned int Beat_gen::current_step()
 
 bool Beat_gen::running()
 {
-  return this->_running;
+  return this->myPulse.getRunning();
 }
 
 float Beat_gen::progress_pct()

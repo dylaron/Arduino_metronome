@@ -1,17 +1,22 @@
+/*
+  A beat generator for a metronome
+  2021 Copyright (c)
+  Author: 'DyLaron' Aaron Yuliang Deng
+  Date: MAY-26-2021
+*/
+
 #ifndef BEAT_GEN_H
 #define BEAT_GEN_H
 
 #include <Arduino.h>
+#include "Pulser.h"
 
 class Beat_gen
 {
 private:
-  unsigned long next_time;
-  unsigned int time_step;
   unsigned int step_count;
   unsigned int c_s;
-  bool _running;
-  bool _firsttick;
+  Pulser myPulse;
 
 public:
   Beat_gen();

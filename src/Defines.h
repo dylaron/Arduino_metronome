@@ -1,7 +1,7 @@
 // IO pin assignments
 #define BUTTONPIN 2    // a N.O. pushbutton between this and GND. Int Pull-up resistor to be used. Start/Stop
 #define LEDRINGPIN 4   // input pin of the LED ring
-#define TONEPIN 6      // a piezo buzzer, between this and GND.
+#define TONEPIN 9      // a piezo buzzer, between this and GND.
 #define PIXELOFFSET 14 // offset for led pixel to get the 1st one at top.
 
 #define NUMPIXELS 16
