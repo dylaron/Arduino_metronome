@@ -19,7 +19,7 @@ unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
 bool upbeat = UPBEAT;
 unsigned int steps_offset = steps_p_beat / 2 * upbeat;
-char m = 'S', m_trapexit = 'S'; // R - running. S - standby. T - tapping
+char currentState = 'S', trapExitState = 'S'; // R - running. S - standby. T - tapping
 
 Beat_gen myBeat;
 Ring_Metronome myRing(pixels, NUMPIXELS, PIXELOFFSET);
@@ -48,7 +48,7 @@ void setup()
   if (init_start)
   {
     myBeat.start(millis());
-    m = 'R';
+    currentState = 'R';
     Serial.print("Started (Auto-run)\n");
   }
 }
@@ -60,21 +60,20 @@ void loop()
   bool buttonDrop = myButton.wasPressed();
   bool buttonRelease = myButton.wasReleased();
   bool longpress = myButton.pressedFor(1600);
-  // Serial.print(m);
-  switch (m)
+  switch (currentState)
   {
   case 'S':
     if (longpress) // Going to tap mode, while stopping at Y to catch the button release
     {
       tap_prepare();
-      m = 'Z';
-      m_trapexit = 'T';
+      currentState = 'Z';
+      trapExitState = 'T';
     }
     else if (buttonRelease)
     {
       myBeat.start(myButton.lastChange());
       Serial.println("Started");
-      m = 'R';
+      currentState = 'R';
     }
     break;
 
@@ -93,8 +92,8 @@ void loop()
     if (buttonDrop)
     {
       myBeat.stop();
-      m = 'Z';
-      m_trapexit = 'S';
+      currentState = 'Z';
+      trapExitState = 'S';
       Serial.println("Stopped");
     }
     break;
@@ -115,7 +114,7 @@ void loop()
           myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
           myBeat.start(myButton.lastChange());
           Serial.println("Started (tap the beat)");
-          m = 'R';
+          currentState = 'R';
         }
         else
         {
@@ -129,14 +128,14 @@ void loop()
     {
       pixels.clear();
       pixels.show();
-      m = 'Z';
-      m_trapexit = 'S';
+      currentState = 'Z';
+      trapExitState = 'S';
     }
     break;
 
   case 'Z': //trap to catch a release action
     if (buttonRelease)
-      m = m_trapexit;
+      currentState = trapExitState;
     break;
 
   default:
