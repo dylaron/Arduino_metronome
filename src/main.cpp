@@ -19,7 +19,7 @@ unsigned int bpm = INITBPM;
 unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
 bool upbeat = UPBEAT,
-     new_long_fired_already = false,
+     long_pressed_fired = false,
      tapping_accepted = false,
      ignore_next_release = false;
 
@@ -145,15 +145,16 @@ void loop()
   if (myButton.wasPressed())
   {
     fsm_metronome.trigger(BUTTON_PRESSED_EVENT);
-    new_long_fired_already = false;
+    long_pressed_fired = false;
   }
 
   if (myButton.pressedFor(1600)) // Going to tap mode
   {
-    if (!new_long_fired_already)
+    if (!long_pressed_fired)
     {
       fsm_metronome.trigger(BUTTON_LONGPRESS_EVENT);
-      new_long_fired_already = true;
+      long_pressed_fired = true;
+      ignore_next_release = true;
     }
   }
   else if (myButton.wasReleased())
