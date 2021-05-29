@@ -134,12 +134,10 @@ State *TappingState::on_state()
     {
       if (myTapper.checkBPM())
       {
-        Serial.println("New BPM Valid!");
         bpm = myTapper.getBPM();
+        Serial.println("New BPM = ");
         Serial.println(bpm);
         myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
-        myBeat.start(myButton.lastChange());
-        Serial.println("Started (tap the beat)");
         return &active_state;
       }
       else
