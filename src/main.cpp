@@ -4,6 +4,7 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <JC_Button.h>
+#include <Fsm.h> // arduino-fsm Library by Jon Black
 
 #include "Defines.h"        // all configurable variables are there
 #include "Beat_Gen.h"       // This class deals with timing
@@ -25,46 +26,56 @@ Ring_Metronome myRing(pixels, NUMPIXELS, PIXELOFFSET);
 Tap2Bpm myTapper(5);
 
 //----------------------------------------------------------
-class State
+void catch_button_release()
 {
-public:
-  virtual ~State() {}
-  virtual void on_enter(){};
-  virtual State *on_state() = 0;
-  virtual void on_exit(){};
-};
-
-class ActiveState : public State
-{
-public:
-  void on_enter();
-  State *on_state();
-};
-
-class StandbyState : public State
-{
-public:
-  void on_enter();
-  State *on_state();
-};
-
-class TappingState : public State
-{
-public:
-  void on_enter();
-  State *on_state();
-};
-//----------------------------------------------------------
-static ActiveState active_state;
-static StandbyState standby_state;
-static TappingState tapping_state;
-//----------------------------------------------------------
-void ActiveState::on_enter()
-{
-  myBeat.start(myButton.lastChange());
+  while (myButton.isPressed())
+    myButton.read();
 }
 
-State *ActiveState::on_state()
+// Trigger Events for the State Machine --------------------
+#define BUTTON_PRESSED_EVENT 0
+#define BUTTON_RELEASED_EVENT 1
+#define BUTTON_LONGPRESS_EVENT 2
+#define TAPPING_SUCC_EVENT 3
+//Forward Declaration
+void on_standby_enter(), on_standby_state();
+void on_active_enter(), on_active_state(), on_active_exit();
+void on_tapping_enter(), on_tapping_state();
+//State Machine Declaration
+State state_standby(&on_standby_enter, &on_standby_state, NULL);
+State state_active(&on_active_enter, &on_active_state, &on_active_exit);
+State state_tapping(&on_tapping_enter, &on_tapping_state, NULL);
+Fsm fsm_metronome(&state_standby);
+
+//State Machine States
+void on_standby_enter()
+{
+  myRing.setTicksRGB();
+  pixels.show();
+}
+//----------------------------------------------------------
+void on_standby_state()
+{
+  if (myButton.pressedFor(1600)) // Going to tap mode
+  {
+    pixels.fill(0x00008000, 0);
+    pixels.show();
+    catch_button_release();
+    fsm_metronome.trigger(BUTTON_LONGPRESS_EVENT);
+  }
+  else if (myButton.wasReleased())
+  {
+    fsm_metronome.trigger(BUTTON_RELEASED_EVENT);
+  }
+}
+//----------------------------------------------------------
+void on_active_enter()
+{
+  myBeat.start(myButton.lastChange());
+  Serial.println("Started");
+}
+//----------------------------------------------------------
+void on_active_state()
 {
   // check if it's time on the beat
   if (myBeat.checktime())
@@ -78,52 +89,23 @@ State *ActiveState::on_state()
       tone(TONEPIN, 196, 30);
   }
   if (myButton.wasPressed())
-  {
-    myBeat.stop();
-    while (myButton.isPressed())
-    {
-      myButton.read();
-    }
-    return &standby_state;
-  }
-  else
-    return this;
+    fsm_metronome.trigger(BUTTON_PRESSED_EVENT);
 }
-
-void StandbyState::on_enter()
+//----------------------------------------------------------
+void on_active_exit()
 {
-  myRing.setTicksRGB();
-  pixels.show();
+  myBeat.stop();
+  Serial.println("Stopped");
+  catch_button_release();
 }
-
-State *StandbyState::on_state()
+//----------------------------------------------------------
+void on_tapping_enter()
 {
-  if (myButton.pressedFor(1600)) // Going to tap mode, while stopping at Y to catch the button release
-  {
-    pixels.fill(0x00008000, 0);
-    pixels.show();
-    while (myButton.isPressed())
-    {
-      myButton.read();
-    };
-    return &tapping_state;
-  }
-  else if (myButton.wasReleased())
-  {
-    //myBeat.start(myButton.lastChange());
-    Serial.println("Started");
-    return &active_state;
-  }
-  else
-    return this;
-}
-
-void TappingState::on_enter()
-{
+  Serial.println("Tapping Ready");
   myTapper.reset();
 }
-
-State *TappingState::on_state()
+//----------------------------------------------------------
+void on_tapping_state()
 {
   if (myButton.wasReleased())
   {
@@ -138,7 +120,7 @@ State *TappingState::on_state()
         Serial.println("New BPM = ");
         Serial.println(bpm);
         myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
-        return &active_state;
+        fsm_metronome.trigger(TAPPING_SUCC_EVENT);
       }
       else
       {
@@ -153,19 +135,10 @@ State *TappingState::on_state()
   {
     pixels.clear();
     pixels.show();
-    while (myButton.isPressed())
-    {
-      myButton.read();
-    }
-    return &standby_state;
+    catch_button_release();
+    fsm_metronome.trigger(BUTTON_LONGPRESS_EVENT);
   }
-  return this;
 }
-
-//---------------------------------------------------------
-bool isChanged = false;
-State *nextState = &standby_state;
-State *nowState = nextState;
 //----------------------------------------------------------
 void setup()
 {
@@ -177,27 +150,16 @@ void setup()
   myRing.setColor(RGBRUNNER, RGB1STTICK, RGBRESTTICK, RGBFLASHS, RGBFLASHW);
   Serial.begin(9600);
 
-  if (init_start)
-  {
-    nowState = &active_state;
-    myBeat.start(millis());
-    Serial.print("Started (Auto-run)\n");
-  }
+  fsm_metronome.add_transition(&state_standby, &state_active, BUTTON_RELEASED_EVENT, NULL);
+  fsm_metronome.add_transition(&state_standby, &state_tapping, BUTTON_LONGPRESS_EVENT, NULL);
+  fsm_metronome.add_transition(&state_tapping, &state_standby, BUTTON_LONGPRESS_EVENT, NULL);
+  fsm_metronome.add_transition(&state_active, &state_standby, BUTTON_PRESSED_EVENT, NULL);
+  fsm_metronome.add_transition(&state_tapping, &state_active, TAPPING_SUCC_EVENT, NULL);
 }
 //----------------------------------------------------------
 void loop()
 {
-  // refresh botton status
-  myButton.read();
-  // if state changed last time, call enter
-  if (isChanged)
-    nowState->on_enter();
-  // call run repeatedly
-  nextState = nowState->on_state();
-  // if state changed, record it;
-  isChanged = (nextState != nowState);
-  // reset lastState to current
-  nowState = nextState;
-
+  myButton.read(); // refresh botton status
+  fsm_metronome.run_machine();
   delay(20);
 }
