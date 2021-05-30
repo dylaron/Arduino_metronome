@@ -118,7 +118,32 @@ State state_standby(&on_standby_enter, NULL, NULL);
 State state_active(&on_active_enter, &on_active_state, &on_active_exit);
 State state_tapping(&on_tapping_enter, &on_tapping_state, NULL);
 Fsm fsm_metronome(&state_standby);
+//----------------------------------------------------------
+void checkButtonsAndTrig(Button &_b, Fsm &_fsm)
+{
+  if (_b.wasPressed())
+  {
+    _fsm.trigger(BUTTON_PRESSED_EVENT);
+    long_pressed_fired = false;
+  }
 
+  if (_b.pressedFor(1600)) // Going to tap mode
+  {
+    if (!long_pressed_fired)
+    {
+      _fsm.trigger(BUTTON_LONGPRESS_EVENT);
+      long_pressed_fired = true;
+      ignore_next_release = true;
+    }
+  }
+  else if (_b.wasReleased())
+  {
+    if (!ignore_next_release)
+      _fsm.trigger(BUTTON_RELEASED_EVENT);
+    else
+      ignore_next_release = false;
+  }
+}
 //----------------------------------------------------------
 void setup()
 {
@@ -141,29 +166,7 @@ void loop()
 {
   myButton.read(); // refresh botton status
   fsm_metronome.run_machine();
-
-  if (myButton.wasPressed())
-  {
-    fsm_metronome.trigger(BUTTON_PRESSED_EVENT);
-    long_pressed_fired = false;
-  }
-
-  if (myButton.pressedFor(1600)) // Going to tap mode
-  {
-    if (!long_pressed_fired)
-    {
-      fsm_metronome.trigger(BUTTON_LONGPRESS_EVENT);
-      long_pressed_fired = true;
-      ignore_next_release = true;
-    }
-  }
-  else if (myButton.wasReleased())
-  {
-    if (!ignore_next_release)
-      fsm_metronome.trigger(BUTTON_RELEASED_EVENT);
-    else
-      ignore_next_release = false;
-  }
+  checkButtonsAndTrig(myButton, fsm_metronome);
   if (tapping_accepted)
   {
     fsm_metronome.trigger(TAPPING_SUCC_EVENT);
