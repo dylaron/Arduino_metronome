@@ -12,7 +12,7 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include "Tap2Bpm.h"
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LEDRINGPIN);
-Button myButton(BUTTONPIN, 80);
+Button myButton(BUTTONPIN, 0, false, false);
 
 const bool init_start = AUTOSTART;
 unsigned int bpm = INITBPM;

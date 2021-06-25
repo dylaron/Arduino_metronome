@@ -15,7 +15,7 @@ void Ring_Metronome::setup(unsigned int _beats)
 
 unsigned int Ring_Metronome::index2pixel(unsigned int _i)
 {
-    return (this->totalpixels - 1 - _i + this->pixoff) % 16;
+    return (_i + this->pixoff) % this->totalpixels;
 };
 
 void Ring_Metronome::setTicksRGB()
