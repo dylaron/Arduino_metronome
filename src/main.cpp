@@ -4,6 +4,7 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <JC_Button.h>
+#include <FlashStorage.h> // To store bpm
 #include <Fsm.h> // arduino-fsm Library by Jon Black
 
 #include "Defines.h"        // all configurable variables are there
@@ -29,7 +30,25 @@ Beat_gen myBeat;
 Ring_Metronome myRing(pixels, NUMPIXELS, PIXELOFFSET);
 Tap2Bpm myTapper(5);
 
+
+// Reserve a portion of flash memory to store the recipe parameters
+int flash_init_mark = 173;
+FlashStorage(my_flash_init_code, int);
+FlashStorage(my_flash_bpm, unsigned int);
 //----------------------------------------------------------
+void bpm_in_binary(Adafruit_NeoPixel &_p, unsigned int _b)
+{
+  _p.clear();
+   for (int i = 0; i < 8; i++)
+  {
+    bool bit = (_b & (1 << i)) != 0;
+    uint32_t col = 0x101000;
+    if (bit)
+      col = 0x00B0C0;
+    _p.setPixelColor(4 + i, col);
+  }
+  _p.show();
+}
 
 // Trigger Events for the State Machine --------------------
 #define BUTTON_PRESSED_EVENT 0
@@ -40,8 +59,9 @@ Tap2Bpm myTapper(5);
 //State Machine States
 void on_standby_enter()
 {
-  myRing.setTicksRGB();
-  pixels.show();
+  // myRing.setTicksRGB();
+  // pixels.show();
+  bpm_in_binary(pixels, bpm);
 }
 
 //----------------------------------------------------------
@@ -98,6 +118,8 @@ void on_tapping_state()
           Serial.println("New BPM = ");
           Serial.println(bpm);
           myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
+          my_flash_bpm.write(bpm);
+          my_flash_init_code.write(flash_init_mark);
           tapping_accepted = true;
         }
         else
@@ -160,6 +182,11 @@ void setup()
   fsm_metronome.add_transition(&state_tapping, &state_standby, BUTTON_LONGPRESS_EVENT, NULL);
   fsm_metronome.add_transition(&state_active, &state_standby, BUTTON_PRESSED_EVENT, NULL);
   fsm_metronome.add_transition(&state_tapping, &state_active, TAPPING_SUCC_EVENT, NULL);
+
+    if (my_flash_init_code.read() == flash_init_mark)
+  {
+    bpm = my_flash_bpm.read();
+  }
 }
 //----------------------------------------------------------
 void loop()
