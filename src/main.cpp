@@ -204,7 +204,7 @@ void on_tapping_enter()
   lcd.setCursor(cur_location[0], 0);
   lcd.print(char(255));
   lcd.setCursor(2, 1);
-  lcd.print(char(0b01101110));
+  lcd.print(char(0b01111110));
 }
 //----------------------------------------------------------
 void on_tapping_state()
