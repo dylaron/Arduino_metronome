@@ -21,6 +21,7 @@ RotaryEncoder encoder(ROTARY_PIN_A, ROTARY_PIN_B, RotaryEncoder::LatchMode::FOUR
 Button myButton(BUTTONPIN);
 
 const bool init_start = AUTOSTART;
+const int cur_location[3] = {0, 5, 12};
 unsigned int bpm = INITBPM, new_bpm;
 unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
@@ -28,7 +29,8 @@ bool upbeat = UPBEAT,
      long_pressed_fired = false,
      tapping_accepted = false,
      ignore_next_release = false;
-bool root_menu_active = false;
+bool root_menu_active = false,
+     encoder_new_position = false;
 
 unsigned int steps_offset = steps_p_beat / 2 * upbeat;
 int current_menu_item = 1;
@@ -68,6 +70,8 @@ void update_bpm()
 //----------------------------------------------------------
 void lcd_showbpm(int _b)
 {
+  lcd.setCursor(7, 1);
+  lcd.print("BPM:");
   lcd.setCursor(12, 1);
   lcd.print("    ");
   lcd.setCursor(12, 1);
@@ -77,6 +81,7 @@ void lcd_showbpm(int _b)
 void checkPosition()
 {
   encoder.tick(); // just call tick() to check the state.
+  encoder_new_position = true;
 }
 // Trigger Events for the State Machine --------------------
 #define MENU_TO_RUN_EVENT 100
@@ -96,14 +101,15 @@ void on_standby_enter()
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.println(" TAP  START  +/-");
+  lcd_showbpm(bpm);
+  Serial.print("Main Manu");
   root_menu_active = true;
   current_menu_item = 1;
-  //ignore_next_release = true;
+  ignore_next_release = true;
 }
 //----------------------------------------------------------
 void on_standby_state()
 {
-  const int cur_location[3] = {0, 5, 12};
   lcd.setCursor(cur_location[current_menu_item], 0);
   lcd.print(">");
   int new_dir = (int)encoder.getDirection();
@@ -119,7 +125,8 @@ void on_standby_state()
 //----------------------------------------------------------
 void on_standby_exit()
 {
-  root_menu_active = false;
+  Serial.print("Leaving Main Manu, with action#");
+  Serial.print(current_menu_item);
 }
 //----------------------------------------------------------
 void on_active_enter()
@@ -130,6 +137,7 @@ void on_active_enter()
   lcd.setCursor(0, 0);
   lcd.print("Running");
   lcd_showbpm(bpm);
+  root_menu_active = false;
 }
 //----------------------------------------------------------
 void on_active_state()
@@ -157,8 +165,13 @@ void on_active_exit()
 //----------------------------------------------------------
 void on_setbpm_enter()
 {
+  lcd.setCursor(cur_location[2], 0);
+  lcd.print(char(255));
+  lcd.setCursor(6, 1);
+  lcd.print(">");
   encoder_init_pos = encoder.getPosition();
   lcd_showbpm(bpm);
+  root_menu_active = false;
 }
 void on_setbpm_state()
 {
@@ -175,7 +188,8 @@ void on_setbpm_exit()
 {
   bpm = new_bpm;
   update_bpm();
-  ignore_next_release = true;
+  lcd.setCursor(6, 1);
+  lcd.print(" ");
 }
 
 //----------------------------------------------------------
@@ -186,6 +200,11 @@ void on_tapping_enter()
   pixels.show();
   myTapper.reset();
   ignore_next_release = true;
+  root_menu_active = false;
+  lcd.setCursor(cur_location[0], 0);
+  lcd.print(char(255));
+  lcd.setCursor(2, 1);
+  lcd.print(char(0b01101110));
 }
 //----------------------------------------------------------
 void on_tapping_state()
@@ -196,6 +215,8 @@ void on_tapping_state()
       bool doneTapping = myTapper.tapNow(myButton.lastChange());
       pixels.fill(0x000000, (15 + PIXELOFFSET - myTapper.getCount() * 3) % 16, 3); // turn off the leds as tapping proceeds
       pixels.show();
+      lcd.setCursor(2, 1);
+      lcd.print(5 - myTapper.getCount());
       if (doneTapping)
       {
         if (myTapper.checkBPM())
@@ -270,8 +291,8 @@ void checkButtonsAndTrig(Button &_b, Fsm &_fsm)
       {
         _fsm.trigger(BUTTON_RELEASED_EVENT);
       }
-      ignore_next_release = false;
     }
+    ignore_next_release = false;
   }
 }
 //----------------------------------------------------------
