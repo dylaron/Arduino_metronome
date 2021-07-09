@@ -14,6 +14,8 @@ Video below
 - Neopixel LED ring. 16-pixel is perfect for rock beat. 1/16th note for each pixel. 12-pixel will be good for blues (4 triplets)
 - A pushbutton switch (normally open)
 - A piezo buzzer
+- (optional) A 1602 LCD display with I2C
+- (optional) A Rotary Encoder
 ![Wiring Diagram](./demo/visual_metronome_diagram.png)
 
 # How to use the code?
@@ -23,4 +25,4 @@ Video below
 - Change the variables in src/Defines.h as you wish
 
 ![back side](./demo/4056813812.jpg)
-![a picture](./demo/visualnome_proto1.jpg)
+![a picture](./demo/visualnome_proto2.jpg)

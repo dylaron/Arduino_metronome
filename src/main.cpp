@@ -5,31 +5,40 @@ Visual-nome, A visual metronome with adafruit NeoPixel light ring. By DyLaron (Y
 #include <Adafruit_NeoPixel.h>
 #include <JC_Button.h>
 #include <FlashStorage.h> // To store bpm
-#include <Fsm.h> // arduino-fsm Library by Jon Black
+#include <Fsm.h>          // arduino-fsm Library by Jon Black
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <RotaryEncoder.h>
 
 #include "Defines.h"        // all configurable variables are there
 #include "Beat_Gen.h"       // This class deals with timing
 #include "Ring_Metronome.h" // This class deals with the visual rendering
 #include "Tap2Bpm.h"
 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LEDRINGPIN);
-Button myButton(BUTTONPIN, 0, false, false);
+RotaryEncoder encoder(ROTARY_PIN_A, ROTARY_PIN_B, RotaryEncoder::LatchMode::FOUR3);
+Button myButton(BUTTONPIN);
 
 const bool init_start = AUTOSTART;
-unsigned int bpm = INITBPM;
+const int cur_location[3] = {0, 5, 12};
+unsigned int bpm = INITBPM, new_bpm;
 unsigned int beats_p_bar = BEATS;
 unsigned int steps_p_beat = SUBBEAT;
 bool upbeat = UPBEAT,
      long_pressed_fired = false,
      tapping_accepted = false,
      ignore_next_release = false;
+bool root_menu_active = false,
+     encoder_new_position = false;
 
 unsigned int steps_offset = steps_p_beat / 2 * upbeat;
+int current_menu_item = 1;
+int encoder_init_pos;
 
 Beat_gen myBeat;
 Ring_Metronome myRing(pixels, NUMPIXELS, PIXELOFFSET);
 Tap2Bpm myTapper(5);
-
 
 // Reserve a portion of flash memory to store the recipe parameters
 int flash_init_mark = 173;
@@ -39,7 +48,7 @@ FlashStorage(my_flash_bpm, unsigned int);
 void bpm_in_binary(Adafruit_NeoPixel &_p, unsigned int _b)
 {
   _p.clear();
-   for (int i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
   {
     bool bit = (_b & (1 << i)) != 0;
     uint32_t col = 0x101000;
@@ -49,12 +58,39 @@ void bpm_in_binary(Adafruit_NeoPixel &_p, unsigned int _b)
   }
   _p.show();
 }
-
+//----------------------------------------------------------
+void update_bpm()
+{
+  Serial.println("New BPM = ");
+  Serial.println(bpm);
+  myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
+  my_flash_bpm.write(bpm);
+  my_flash_init_code.write(flash_init_mark);
+}
+//----------------------------------------------------------
+void lcd_showbpm(int _b)
+{
+  lcd.setCursor(7, 1);
+  lcd.print("BPM:");
+  lcd.setCursor(12, 1);
+  lcd.print("    ");
+  lcd.setCursor(12, 1);
+  lcd.print(_b);
+}
+//----------------------------------------------------------
+void checkPosition()
+{
+  encoder.tick(); // just call tick() to check the state.
+  encoder_new_position = true;
+}
 // Trigger Events for the State Machine --------------------
-#define BUTTON_PRESSED_EVENT 0
+#define MENU_TO_RUN_EVENT 100
+#define MENU_TO_SET_BPM_EVENT 102
+#define MENU_TO_TAP_BPM_EVENT 103
 #define BUTTON_RELEASED_EVENT 1
 #define BUTTON_LONGPRESS_EVENT 2
 #define TAPPING_SUCC_EVENT 3
+#define BUTTON_PRESSED_EVENT 5
 
 //State Machine States
 void on_standby_enter()
@@ -62,13 +98,46 @@ void on_standby_enter()
   // myRing.setTicksRGB();
   // pixels.show();
   bpm_in_binary(pixels, bpm);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.println(" TAP  START  +/-");
+  lcd_showbpm(bpm);
+  Serial.print("Main Manu");
+  root_menu_active = true;
+  current_menu_item = 1;
+  ignore_next_release = true;
 }
-
+//----------------------------------------------------------
+void on_standby_state()
+{
+  lcd.setCursor(cur_location[current_menu_item], 0);
+  lcd.print(">");
+  int new_dir = (int)encoder.getDirection();
+  if (new_dir != 0)
+  {
+    lcd.setCursor(cur_location[current_menu_item], 0);
+    lcd.print(" ");
+    current_menu_item += new_dir;
+    current_menu_item = (current_menu_item + 6) % 3;
+    Serial.println(new_dir);
+  }
+}
+//----------------------------------------------------------
+void on_standby_exit()
+{
+  Serial.print("Leaving Main Manu, with action#");
+  Serial.print(current_menu_item);
+}
 //----------------------------------------------------------
 void on_active_enter()
 {
   myBeat.start(myButton.lastChange());
   Serial.println("Started");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Running");
+  lcd_showbpm(bpm);
+  root_menu_active = false;
 }
 //----------------------------------------------------------
 void on_active_state()
@@ -92,6 +161,37 @@ void on_active_exit()
   myBeat.stop();
   Serial.println("Stopped");
 }
+
+//----------------------------------------------------------
+void on_setbpm_enter()
+{
+  lcd.setCursor(cur_location[2], 0);
+  lcd.print(char(255));
+  lcd.setCursor(6, 1);
+  lcd.print(">");
+  encoder_init_pos = encoder.getPosition();
+  lcd_showbpm(bpm);
+  root_menu_active = false;
+}
+void on_setbpm_state()
+{
+  static int last_encoder_position = 0;
+  int encoder_position = encoder.getPosition();
+  if (encoder_position != last_encoder_position)
+  {
+    new_bpm = bpm + (encoder.getPosition() - encoder_init_pos);
+    lcd_showbpm(new_bpm);
+  }
+  last_encoder_position = encoder_position;
+}
+void on_setbpm_exit()
+{
+  bpm = new_bpm;
+  update_bpm();
+  lcd.setCursor(6, 1);
+  lcd.print(" ");
+}
+
 //----------------------------------------------------------
 void on_tapping_enter()
 {
@@ -100,6 +200,11 @@ void on_tapping_enter()
   pixels.show();
   myTapper.reset();
   ignore_next_release = true;
+  root_menu_active = false;
+  lcd.setCursor(cur_location[0], 0);
+  lcd.print(char(255));
+  lcd.setCursor(2, 1);
+  lcd.print(char(0b01111110));
 }
 //----------------------------------------------------------
 void on_tapping_state()
@@ -110,16 +215,14 @@ void on_tapping_state()
       bool doneTapping = myTapper.tapNow(myButton.lastChange());
       pixels.fill(0x000000, (15 + PIXELOFFSET - myTapper.getCount() * 3) % 16, 3); // turn off the leds as tapping proceeds
       pixels.show();
+      lcd.setCursor(2, 1);
+      lcd.print(5 - myTapper.getCount());
       if (doneTapping)
       {
         if (myTapper.checkBPM())
         {
           bpm = myTapper.getBPM();
-          Serial.println("New BPM = ");
-          Serial.println(bpm);
-          myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
-          my_flash_bpm.write(bpm);
-          my_flash_init_code.write(flash_init_mark);
+          update_bpm();
           tapping_accepted = true;
         }
         else
@@ -136,9 +239,10 @@ void on_tapping_state()
 }
 
 //State Machine Declaration
-State state_standby(&on_standby_enter, NULL, NULL);
+State state_standby(&on_standby_enter, &on_standby_state, &on_standby_exit);
 State state_active(&on_active_enter, &on_active_state, &on_active_exit);
 State state_tapping(&on_tapping_enter, &on_tapping_state, NULL);
+State state_setbpm(&on_setbpm_enter, &on_setbpm_state, &on_setbpm_exit);
 Fsm fsm_metronome(&state_standby);
 //----------------------------------------------------------
 void checkButtonsAndTrig(Button &_b, Fsm &_fsm)
@@ -161,29 +265,61 @@ void checkButtonsAndTrig(Button &_b, Fsm &_fsm)
   else if (_b.wasReleased())
   {
     if (!ignore_next_release)
-      _fsm.trigger(BUTTON_RELEASED_EVENT);
-    else
-      ignore_next_release = false;
+    {
+      if (root_menu_active)
+      {
+        switch (current_menu_item)
+        {
+        case 0:
+        {
+          _fsm.trigger(MENU_TO_TAP_BPM_EVENT);
+          break;
+        }
+        case 1:
+        {
+          _fsm.trigger(MENU_TO_RUN_EVENT);
+          break;
+        }
+        case 2:
+        {
+          _fsm.trigger(MENU_TO_SET_BPM_EVENT);
+          break;
+        }
+        }
+      }
+      else
+      {
+        _fsm.trigger(BUTTON_RELEASED_EVENT);
+      }
+    }
+    ignore_next_release = false;
   }
 }
 //----------------------------------------------------------
 void setup()
 {
   myButton.begin();
+  lcd.init();
+  lcd.backlight();
   pixels.begin();
   pixels.setBrightness(45); // 1/3 brightness
   myBeat.setBeats(bpm, beats_p_bar, steps_p_beat);
   myRing.setup(beats_p_bar);
   myRing.setColor(RGBRUNNER, RGB1STTICK, RGBRESTTICK, RGBFLASHS, RGBFLASHW);
   Serial.begin(9600);
+  attachInterrupt(digitalPinToInterrupt(ROTARY_PIN_A), checkPosition, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ROTARY_PIN_B), checkPosition, CHANGE);
 
-  fsm_metronome.add_transition(&state_standby, &state_active, BUTTON_RELEASED_EVENT, NULL);
+  fsm_metronome.add_transition(&state_standby, &state_active, MENU_TO_RUN_EVENT, NULL);
+  fsm_metronome.add_transition(&state_standby, &state_setbpm, MENU_TO_SET_BPM_EVENT, NULL);
+  fsm_metronome.add_transition(&state_setbpm, &state_standby, BUTTON_RELEASED_EVENT, NULL);
+  fsm_metronome.add_transition(&state_standby, &state_tapping, MENU_TO_TAP_BPM_EVENT, NULL);
   fsm_metronome.add_transition(&state_standby, &state_tapping, BUTTON_LONGPRESS_EVENT, NULL);
   fsm_metronome.add_transition(&state_tapping, &state_standby, BUTTON_LONGPRESS_EVENT, NULL);
   fsm_metronome.add_transition(&state_active, &state_standby, BUTTON_PRESSED_EVENT, NULL);
   fsm_metronome.add_transition(&state_tapping, &state_active, TAPPING_SUCC_EVENT, NULL);
 
-    if (my_flash_init_code.read() == flash_init_mark)
+  if (my_flash_init_code.read() == flash_init_mark)
   {
     bpm = my_flash_bpm.read();
   }
@@ -199,5 +335,7 @@ void loop()
     fsm_metronome.trigger(TAPPING_SUCC_EVENT);
     tapping_accepted = false;
   }
+
+  encoder.tick();
   delay(20);
 }
